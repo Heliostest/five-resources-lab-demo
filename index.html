@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>五资源与人口循环 · 玩具演示</title>
+<style>html,body{margin:0;background:#171d1b}.fiveResourcesLab{min-height:100dvh;padding:24px 28px;background:#171d1b;color:#ddd2bb;font:14px/1.5 system-ui,sans-serif;transition:background .6s}
+.fiveResourcesLab[data-dark=true]{background:#0b0b0e;color:#a9a2b3}
+.fiveResourcesLab h1{font-size:26px;margin:8px 0}.fiveResourcesLab h2{font-size:13px;letter-spacing:.12em;color:#a99d7c;margin:18px 0 8px}.fiveResourcesLab h3{font-size:14px;margin:0 0 6px}
+.frlEyebrow{font:10px ui-monospace,monospace;letter-spacing:.14em;color:#c98f5a;margin:0}.frlIntro,.frlNote{color:#8f978b;font-size:12px}.frlMeta{font-size:12px;color:#b8b09a}
+.frlDarkBanner{padding:10px 14px;border-left:4px solid #8d3b52;background:#2a1520;color:#e8c3cf}
+.frlGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;align-items:start}
+.frlBar{display:grid;grid-template-columns:120px 1fr 36px;gap:8px;align-items:center;margin:5px 0;font-size:12px}
+.frlBarLabel small{display:block;font-size:10px;color:#7f8679}
+.frlBarTrack{height:10px;border-radius:5px;background:#2b322e;overflow:hidden}.frlBarFill{display:block;height:100%;background:var(--frl-tone,#8a9a6a);transition:width .3s}
+.frlBarValue{text-align:right;font:12px ui-monospace,monospace}
+.frlBar[data-tone=survival]{--frl-tone:#8fb35a}.frlBar[data-tone=tools]{--frl-tone:#c79b4d}.frlBar[data-tone=population]{--frl-tone:#e0d27a}.frlBar[data-tone=order]{--frl-tone:#5d9ec2}.frlBar[data-tone=violence]{--frl-tone:#c25d4f}
+.frlBar[data-tone=political]{--frl-tone:#9a7ad0}.frlBar[data-tone=corruption]{--frl-tone:#7e3f6a}.frlBar[data-tone=satisfaction]{--frl-tone:#6fb39a}.frlBar[data-tone=power]{--frl-tone:#b08a5e}.frlBar[data-tone=danger]{--frl-tone:#d0474a}
+.frlDivider{border-top:1px dashed #4c5143;margin:8px 0}
+.frlUnits{display:flex;flex-wrap:wrap;gap:5px}.frlUnit{width:18px;height:18px;border-radius:3px;background:#e0d27a}
+.frlActions{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.fiveResourcesLab button{cursor:pointer;border:1px solid #7b806044;background:#29332e;color:#dfd5be;padding:6px 10px;border-radius:5px;font:12px system-ui}
+.fiveResourcesLab button:disabled{opacity:.4;cursor:default}.frlPrimary button{font-size:14px;padding:9px 16px;background:#5d6247}
+.frlStratum{padding:10px 12px;margin-bottom:10px;border:1px solid #4c514355;border-radius:6px;background:#1f2723}
+.frlLog{max-height:70dvh;overflow:auto;margin:0;padding-left:22px;font:12px/1.7 ui-monospace,monospace}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const copy = {"eyebrow": "DEBUG LAB · demo / placeholder · debug-only，未进 i18n catalog", "title": "五资源与人口循环 · 玩具演示", "titleDark": "黑暗时代 · 演示已崩溃", "intro": "本地 React state 玩具数值，不读 content.json、不接 GameEngine、不碰存档。规格见 docs/superpowers/specs/2026-10-27-five-resources-population-loop-proposal.md（提案，未批准）。", "era": "聚落·村庄", "turn": "回合", "resources": "五类资源", "res": {"survival": "生存物资", "tools": "工具物资", "population": "人口", "order": "社会秩序", "violence": "暴力", "political": "政治资源"}, "politicalNote": "demo：是否算第六条未定", "units": "人口单位", "unitName": "村庄", "acquire": "获取单位", "merge": "合并（3→1，玩具）", "merged": "合并次数", "strata": "阶层", "strataName": {"ruling": "统治", "commoner": "平民", "wealthy": "富有", "artisan": "工匠"}, "satisfaction": "满意度", "power": "实力", "extract": "汲取", "suppress": "打压", "raise": "提升", "corruption": "腐败值", "corruptionNote": "唯一负面计量；每回合缓慢上涨，截留社会资源、拉低满意度", "greatWork": "尝试伟业（抑制腐败）", "nextTurn": "下一回合", "reset": "重置演示", "log": "回合流水", "logEmpty": "点「下一回合」开始", "darkWarning": "腐败 ≥ {c} 且平均满意度 ≤ {s}（玩具阈值）→ 黑暗时代", "darkBanner": "死亡螺旋：腐败过高、满意度过低，文明跌入黑暗时代。完整规则未实现，仅可重置。", "step": {"produce": "产出：{n} 个村庄 → 生存 +{s}，工具 +{t}，秩序 +{o}，暴力 +{v}", "extract": "汲取：统治拿走生存 {r}、工具 {t}；非统治阶层汲取 {n}", "skim": "截留／腐败：腐败 {c} 截留 {k}；低满意度阶层截留 {l}", "surplus": "统治结余：{b}", "political": "满意度盈余折政治资源 +{p}", "corruption": "腐败 +{d} → {c}", "dark": "⚠ 跌入黑暗时代"}, "action": {"acquire": "获取 1 个村庄（短事件链略）", "merge": "合并伟业：3 村庄 → 1 合并点", "mergeFail": "单位不足 3，无法合并", "extract": "{who} 被额外汲取：统治 +{g} 生存，{who} 满意度 −{d}", "suppress": "{who} 被打压：实力 −{p}，满意度 −{d}，暴力 −{v}", "raise": "{who} 被提升：满意度 +{d}，实力 +{p}，耗生存 {c}", "greatWork": "尝试伟业：耗工具 {c}，腐败 −{d}", "greatWorkFail": "工具物资不足 {c}，伟业无法开工", "darkLocked": "黑暗时代中，只能重置"}};
+const DARK_CORRUPTION=70, DARK_SATISFACTION=30, LOW_SATISFACTION=30, MAX_BAR=100, MAX_UNITS=12, GREAT_WORK_COST=8;
+const clamp=(v,max=MAX_BAR)=>Math.max(0,Math.min(max,Math.round(v)));
+const fmt=(t,vars)=>t.replace(/\{(\w+)\}/g,(_,k)=>String(vars[k]??''));
+const nameOf=id=>copy.strataName[id];
+function initialLabState(){
+  return {turn:1,units:3,merges:0,corruption:20,sinceGreatWork:0,dark:false,
+    resources:{survival:10,tools:10,order:8,violence:4,political:0},
+    strata:[{id:'ruling',satisfaction:72,power:60},{id:'commoner',satisfaction:55,power:30},{id:'wealthy',satisfaction:60,power:40},{id:'artisan',satisfaction:60,power:35}],
+    log:[]};
+}
+const averageSatisfaction=s=>s.strata.reduce((a,i)=>a+i.satisfaction,0)/s.strata.length;
+const isDark=s=>s.corruption>=DARK_CORRUPTION&&averageSatisfaction(s)<=DARK_SATISFACTION;
+function advanceTurn(state){
+  if(state.dark)return {...state,log:[...state.log,copy.action.darkLocked]};
+  const lines=[`— ${copy.turn} ${state.turn} —`];
+  const res={...state.resources};
+  const produced={s:state.units*3,t:state.units*2,o:state.units,v:state.units};
+  lines.push(fmt(copy.step.produce,{n:state.units,...produced}));
+  const rulingSurvival=Math.round(produced.s*.4),rulingTools=Math.round(produced.t*.3);
+  const others=state.strata.filter(i=>i.id==='wealthy'||i.id==='artisan');
+  const otherTake=others.reduce((sum,i)=>sum+Math.round(produced.s*.1*i.power/50),0);
+  lines.push(fmt(copy.step.extract,{r:rulingSurvival,t:rulingTools,n:otherTake}));
+  const skim=Math.round(rulingSurvival*state.corruption/100);
+  const unhappy=state.strata.filter(i=>i.id!=='ruling'&&i.satisfaction<LOW_SATISFACTION);
+  const withheld=unhappy.length*2;
+  lines.push(fmt(copy.step.skim,{c:state.corruption,k:skim,l:withheld}));
+  const balance=rulingSurvival-skim-withheld;
+  lines.push(fmt(copy.step.surplus,{b:balance}));
+  res.survival=clamp(res.survival+produced.s-rulingSurvival-otherTake+Math.max(0,balance),999);
+  res.tools=clamp(res.tools+produced.t,999);
+  res.order=clamp(res.order+produced.o-Math.ceil(state.corruption/20),999);
+  res.violence=clamp(res.violence+produced.v,999);
+  const political=state.strata.reduce((sum,i)=>sum+Math.max(0,Math.floor((i.satisfaction-60)/10)),0);
+  if(political>0){res.political=clamp(res.political+political,999);lines.push(fmt(copy.step.political,{p:political}));}
+  const delta=2+(state.sinceGreatWork>=3?3:0);
+  const corruption=clamp(state.corruption+delta);
+  lines.push(fmt(copy.step.corruption,{d:delta,c:corruption}));
+  const drag=Math.round(corruption/25);
+  const strata=state.strata.map(item=>{
+    let satisfaction=item.satisfaction-drag;
+    if(item.id==='ruling'&&balance<0)satisfaction-=5;
+    if(item.id==='commoner'&&res.survival<state.units*2)satisfaction-=5;
+    const power=unhappy.includes(item)?item.power+3:item.power;
+    return {...item,satisfaction:clamp(satisfaction),power:clamp(power)};
+  });
+  const next={...state,turn:state.turn+1,corruption,sinceGreatWork:state.sinceGreatWork+1,resources:res,strata,log:[]};
+  next.dark=isDark(next);
+  if(next.dark)lines.push(copy.step.dark);
+  return {...next,log:[...state.log,...lines]};
+}
+function reduceLab(state,action){
+  if(action.type==='reset')return initialLabState();
+  if(action.type==='next')return advanceTurn(state);
+  if(state.dark)return {...state,log:[...state.log,copy.action.darkLocked]};
+  const log=(line,patch={})=>({...state,...patch,log:[...state.log,line]});
+  const updateStratum=(id,fn)=>state.strata.map(i=>i.id===id?fn(i):i);
+  switch(action.type){
+    case 'acquire':return log(copy.action.acquire,{units:Math.min(MAX_UNITS,state.units+1)});
+    case 'merge':return state.units<3?log(copy.action.mergeFail):log(copy.action.merge,{units:state.units-2,merges:state.merges+1});
+    case 'greatWork':{
+      if(state.resources.tools<GREAT_WORK_COST)return log(fmt(copy.action.greatWorkFail,{c:GREAT_WORK_COST}));
+      const drop=Math.min(state.corruption,25);
+      return log(fmt(copy.action.greatWork,{c:GREAT_WORK_COST,d:drop}),{corruption:state.corruption-drop,sinceGreatWork:0,resources:{...state.resources,tools:state.resources.tools-GREAT_WORK_COST}});
+    }
+    case 'extract':{
+      const who=nameOf(action.stratum);
+      return log(fmt(copy.action.extract,{who,g:4,d:8}),{resources:{...state.resources,survival:state.resources.survival+4},strata:updateStratum(action.stratum,i=>({...i,satisfaction:clamp(i.satisfaction-8)}))});
+    }
+    case 'suppress':{
+      const who=nameOf(action.stratum);
+      return log(fmt(copy.action.suppress,{who,p:10,d:10,v:3}),{resources:{...state.resources,violence:Math.max(0,state.resources.violence-3)},strata:updateStratum(action.stratum,i=>({...i,power:clamp(i.power-10),satisfaction:clamp(i.satisfaction-10)}))});
+    }
+    case 'raise':{
+      const who=nameOf(action.stratum);
+      return log(fmt(copy.action.raise,{who,d:10,p:5,c:3}),{resources:{...state.resources,survival:Math.max(0,state.resources.survival-3)},strata:updateStratum(action.stratum,i=>({...i,satisfaction:clamp(i.satisfaction+10),power:clamp(i.power+5)}))});
+    }
+  }
+}
+function bar(label,value,max,tone,note){
+  const pct=Math.min(100,value/max*100);
+  return `<div class="frlBar" data-tone="${tone}"><span class="frlBarLabel">${label}${note?`<small>${note}</small>`:''}</span><span class="frlBarTrack"><span class="frlBarFill" style="width:${pct}%"></span></span><span class="frlBarValue">${value}</span></div>`;
+}
+let state=initialLabState();
+function dispatch(action){state=reduceLab(state,action);render();}
+function render(){
+  const r=state.resources;
+  const units=Array.from({length:state.units},()=>'<span class="frlUnit"></span>').join('');
+  const strata=state.strata.map(item=>{
+    const acts=item.id==='ruling'?'':`<div class="frlActions">
+      <button data-a="extract" data-s="${item.id}">${copy.extract}</button>
+      <button data-a="suppress" data-s="${item.id}">${copy.suppress}</button>
+      <button data-a="raise" data-s="${item.id}">${copy.raise}</button>
+    </div>`;
+    return `<article class="frlStratum" data-stratum="${item.id}"><h3>${nameOf(item.id)}</h3>
+      ${bar(copy.satisfaction,item.satisfaction,MAX_BAR,item.satisfaction<LOW_SATISFACTION?'danger':'satisfaction')}
+      ${bar(copy.power,item.power,MAX_BAR,'power')}${acts}</article>`;
+  }).join('');
+  const log=state.log.length?state.log.map(l=>`<li>${l}</li>`).join(''):`<li class="frlNote">${copy.logEmpty}</li>`;
+  document.getElementById('root').innerHTML=`<main class="fiveResourcesLab" data-dark="${state.dark}">
+    <header>
+      <p class="frlEyebrow">${copy.eyebrow}</p>
+      <h1>${state.dark?copy.titleDark:copy.title}</h1>
+      <p class="frlIntro">${copy.intro}</p>
+      <p class="frlMeta"><b>${copy.era}</b> · ${copy.turn} ${state.turn}</p>
+      ${state.dark?`<p class="frlDarkBanner" role="alert">${copy.darkBanner}</p>`:''}
+    </header>
+    <div class="frlGrid">
+      <section>
+        <h2>${copy.resources}</h2>
+        ${bar(copy.res.survival,r.survival,60,'survival')}
+        ${bar(copy.res.tools,r.tools,60,'tools')}
+        ${bar(copy.res.population,state.units,MAX_UNITS,'population',copy.unitName)}
+        ${bar(copy.res.order,r.order,60,'order')}
+        ${bar(copy.res.violence,r.violence,60,'violence')}
+        <div class="frlDivider"></div>
+        ${bar(copy.res.political,r.political,30,'political',copy.politicalNote)}
+        <h2>${copy.units}</h2>
+        <div class="frlUnits">${units}</div>
+        <p class="frlMeta">${copy.unitName} × ${state.units} · ${copy.merged} ${state.merges}</p>
+        <div class="frlActions">
+          <button data-a="acquire">${copy.acquire}</button>
+          <button data-a="merge">${copy.merge}</button>
+        </div>
+        <h2>${copy.corruption}</h2>
+        ${bar(copy.corruption,state.corruption,MAX_BAR,'corruption',copy.corruptionNote)}
+        <div class="frlActions"><button data-a="greatWork">${copy.greatWork}</button></div>
+        <p class="frlNote">${fmt(copy.darkWarning,{c:DARK_CORRUPTION,s:DARK_SATISFACTION})}</p>
+      </section>
+      <section><h2>${copy.strata}</h2>${strata}</section>
+      <section class="frlLogPanel">
+        <div class="frlActions frlPrimary">
+          <button data-a="next" ${state.dark?'disabled':''}>${copy.nextTurn}</button>
+          <button data-a="reset">${copy.reset}</button>
+        </div>
+        <h2>${copy.log}</h2>
+        <ol class="frlLog">${log}</ol>
+      </section>
+    </div>
+  </main>`;
+  document.querySelectorAll('button[data-a]').forEach(btn=>{
+    btn.onclick=()=>{
+      const a=btn.getAttribute('data-a');
+      const s=btn.getAttribute('data-s');
+      if(s) dispatch({type:a,stratum:s});
+      else dispatch({type:a});
+    };
+  });
+}
+render();
+</script>
+</body>
+</html>
